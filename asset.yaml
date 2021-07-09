@@ -1,0 +1,51 @@
+# API KEY
+apiVersion: passport/v1
+kind: ApiKey
+metadata:
+  name: clone-secret-key
+spec:
+  name: Secret Api Key For Clone Asset
+  policies:
+    - BucketFullAccess
+    - FunctionFullAccess
+---
+# FUNCTION CLONE
+apiVersion: function/v1
+kind: Function
+metadata:
+  name: clone
+spec:
+  title: Clone Server - Receiver side
+  description: "Receive your buckets and functions with dependencies and environments from another server"
+  timeout: 300
+  code: ./function/clone.js
+  runtime:
+    name: Node
+    language: Javascript
+  environment:
+    - name: API_KEY
+      valueFrom:
+        resourceFieldRef:
+          apiKeyName: clone-secret-key
+    - name: _IGNORE_
+      value: "Dont't remove this environment !"
+  dependency:
+    - name: "@spica-devkit/bucket"
+      version: latest
+    - name: "@spica-devkit/database"
+      version: latest
+    - name: "node-fetch"
+      version: latest
+---
+# TRIGGER - Export
+apiVersion: function/v1
+kind: Trigger
+metadata:
+  name: receiver-side
+spec:
+  name: receiver
+  func: clone
+  type: http
+  httpOptions:
+    method: Post
+    path: /receiver
