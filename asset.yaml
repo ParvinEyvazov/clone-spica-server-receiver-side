@@ -4,7 +4,7 @@ kind: ApiKey
 metadata:
   name: clone-secret-key
 spec:
-  name: Secret Api Key For Clone Asset
+  name: Secret Api Key Receiver Side
   policies:
     - BucketFullAccess
     - FunctionFullAccess

@@ -80,70 +80,77 @@ export async function receiver(req, res) {
   const { data } = req.body;
   const HOST = req.headers.get("host");
 
-  Bucket.initialize({ apikey: `${process.env.API_KEY}` });
+  if (data.key == process.env.API_KEY) {
+    Bucket.initialize({ apikey: `${process.env.API_KEY}` });
 
-  /////////--------------Bucket Operations-----------------////////////
-  await bucketOperations(data.schemas);
-  /////////--------------Bucket Operations-----------------////////////
+    /////////--------------Bucket Operations-----------------////////////
+    await bucketOperations(data.schemas);
+    /////////--------------Bucket Operations-----------------////////////
 
-  /////////--------------Delete Functions-----------------////////////
-  await deleteFunctions(HOST);
-  /////////--------------Delete Functions-----------------////////////
+    /////////--------------Delete Functions-----------------////////////
+    await deleteFunctions(HOST);
+    /////////--------------Delete Functions-----------------////////////
 
-  /////////--------------Insert Functions-----------------////////////
-  let tempDep;
-  let tempIndex;
-  for (const func of data.allFunctions) {
-    delete func._id;
-    tempDep = func.dependencies;
-    tempIndex = func.index;
-    delete func.index;
-    delete func.dependencies;
-    if (!data.env) func.env = {};
-    console.log(func.name + " function inserting");
-    await fetch(`https://${HOST}/api/function`, {
-      method: "post",
-      body: JSON.stringify(func),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `APIKEY ${process.env.API_KEY}`,
-      },
-    })
-      .then((res) => res.json())
-      .then(async (json) => {
-        /////////--------------Insert Index-----------------////////////
-        if (tempIndex.index) {
-          await fetch(`https://${HOST}/api/function/${json._id}/index`, {
-            method: "post",
-            body: JSON.stringify(tempIndex),
-
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `APIKEY ${process.env.API_KEY}`,
-            },
-          });
-        }
-        /////////--------------Insert Index-----------------////////////
-
-        /////////--------------Insert Dependencies-----------------////////////
-        for (const dep of tempDep) {
-          await fetch(`https://${HOST}/api/function/${json._id}/dependencies`, {
-            method: "post",
-            body: JSON.stringify({ name: dep.name + "@" + dep.version }),
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `APIKEY ${process.env.API_KEY}`,
-            },
-          });
-        }
-        /////////--------------Insert Dependencies-----------------////////////
+    /////////--------------Insert Functions-----------------////////////
+    let tempDep;
+    let tempIndex;
+    for (const func of data.allFunctions) {
+      delete func._id;
+      tempDep = func.dependencies;
+      tempIndex = func.index;
+      delete func.index;
+      delete func.dependencies;
+      if (!data.env) func.env = {};
+      console.log(func.name + " function inserting");
+      await fetch(`https://${HOST}/api/function`, {
+        method: "post",
+        body: JSON.stringify(func),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `APIKEY ${process.env.API_KEY}`,
+        },
       })
-      .catch((error) => console.log("error when function insert", error));
-  }
-  /////////--------------Insert Functions-----------------////////////
+        .then((res) => res.json())
+        .then(async (json) => {
+          /////////--------------Insert Index-----------------////////////
+          if (tempIndex.index) {
+            await fetch(`https://${HOST}/api/function/${json._id}/index`, {
+              method: "post",
+              body: JSON.stringify(tempIndex),
 
-  console.log("-----------Clone Done--------------");
-  return res.status(200).send({ message: "Ok receiver" });
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `APIKEY ${process.env.API_KEY}`,
+              },
+            });
+          }
+          /////////--------------Insert Index-----------------////////////
+
+          /////////--------------Insert Dependencies-----------------////////////
+          for (const dep of tempDep) {
+            await fetch(
+              `https://${HOST}/api/function/${json._id}/dependencies`,
+              {
+                method: "post",
+                body: JSON.stringify({ name: dep.name + "@" + dep.version }),
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `APIKEY ${process.env.API_KEY}`,
+                },
+              }
+            );
+          }
+          /////////--------------Insert Dependencies-----------------////////////
+        })
+        .catch((error) => console.log("error when function insert", error));
+    }
+    /////////--------------Insert Functions-----------------////////////
+
+    console.log("-----------Clone Done--------------");
+    return res.status(200).send({ message: "Ok receiver" });
+  } else {
+    return res.status(400).send({ message: "KEY ERROR" });
+  }
 }
 
 async function bucketOperations(newSchemas) {
